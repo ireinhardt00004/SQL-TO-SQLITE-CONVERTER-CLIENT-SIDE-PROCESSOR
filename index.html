@@ -1,0 +1,3354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+<title>Client-side SQL Converter Studio</title>
+
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com"></script>
+
+<!-- SQL.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
+
+<script>
+    tailwind.config = {
+        theme: {
+            extend: {
+                fontFamily: {
+                    sans: ['Inter', 'ui-sans-serif', 'system-ui'],
+                    mono: ['JetBrains Mono', 'Consolas', 'monospace']
+                }
+            }
+        }
+    };
+</script>
+
+<style>
+    html {
+        scroll-behavior: smooth;
+    }
+
+    body {
+        background:
+            radial-gradient(
+                circle at top left,
+                rgba(59, 130, 246, 0.10),
+                transparent 35%
+            ),
+            radial-gradient(
+                circle at top right,
+                rgba(139, 92, 246, 0.08),
+                transparent 35%
+            ),
+            #020617;
+    }
+
+    .glass {
+        background: rgba(15, 23, 42, 0.82);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+    }
+
+    .drop-zone {
+        transition:
+            border-color .2s ease,
+            background-color .2s ease,
+            transform .2s ease;
+    }
+
+    .drop-zone.dragover {
+        border-color: rgb(59 130 246);
+        background: rgba(37, 99, 235, .10);
+        transform: scale(1.01);
+    }
+
+    .custom-scrollbar::-webkit-scrollbar {
+        width: 7px;
+        height: 7px;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-track {
+        background: #0f172a;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #334155;
+        border-radius: 999px;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: #475569;
+    }
+
+    textarea {
+        tab-size: 4;
+    }
+
+    .loader {
+        width: 18px;
+        height: 18px;
+        border: 2px solid rgba(255,255,255,.25);
+        border-top-color: white;
+        border-radius: 999px;
+        animation: spin .7s linear infinite;
+    }
+
+    @keyframes spin {
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
+    .fade-in {
+        animation: fadeIn .25s ease-out;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(5px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+</style>
+</head>
+
+<body class="min-h-screen text-slate-200">
+<!-- =========================================================
+     APPLICATION
+========================================================== -->
+
+<div class="min-h-screen">
+
+    <!-- =====================================================
+         HEADER
+    ====================================================== -->
+
+    <header class="sticky top-0 z-50 border-b border-slate-800/80 glass">
+
+        <div class="mx-auto flex h-20 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+
+            <!-- Brand -->
+
+            <div class="flex items-center gap-3">
+
+                <div
+                    class="flex h-11 w-11 items-center justify-center rounded-xl
+                           bg-gradient-to-br from-blue-500 to-violet-600
+                           shadow-lg shadow-blue-500/20"
+                >
+                    <svg
+                        class="h-6 w-6 text-white"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="1.8"
+                            d="M4 7h16M4 12h16M4 17h10"
+                        />
+                    </svg>
+                </div>
+
+                <div>
+                    <h1 class="text-lg font-bold tracking-tight text-white sm:text-xl">
+                        SQL Converter Studio
+                    </h1>
+
+                    <p class="hidden text-xs text-slate-400 sm:block">
+                        MySQL ↔ SQLite conversion toolkit
+                    </p>
+                </div>
+
+            </div>
+
+            <!-- Status -->
+
+            <div class="flex items-center gap-2 rounded-full border border-emerald-500/20
+                        bg-emerald-500/10 px-3 py-1.5">
+
+                <span class="h-2 w-2 rounded-full bg-emerald-400 shadow-lg shadow-emerald-400/50"></span>
+
+                <span class="text-xs font-medium text-emerald-300">
+                    Browser Processing
+                </span>
+
+            </div>
+
+        </div>
+
+    </header>
+
+
+    <!-- =====================================================
+         MAIN
+    ====================================================== -->
+
+    <main class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+
+        <!-- =================================================
+             HERO
+        ================================================== -->
+
+        <section class="mb-8">
+
+            <div class="max-w-3xl">
+
+                <div class="mb-3 inline-flex items-center gap-2 rounded-full
+                            border border-blue-500/20 bg-blue-500/10
+                            px-3 py-1 text-xs font-semibold text-blue-300">
+
+                    <svg
+                        class="h-3.5 w-3.5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M13 10V3L4 14h7v7l9-11h-7z"
+                        />
+                    </svg>
+
+                    Client-side SQL conversion
+                </div>
+
+                <h2 class="text-3xl font-bold tracking-tight text-white sm:text-4xl">
+                    Convert your database
+                    <span class="bg-gradient-to-r from-blue-400 to-violet-400 bg-clip-text text-transparent">
+                        safely and quickly.
+                    </span>
+                </h2>
+
+                <p class="mt-3 text-sm leading-6 text-slate-400 sm:text-base">
+                    Convert MySQL dump files to SQLite databases or export
+                    SQLite databases back into MySQL-compatible SQL.
+                    Your files are processed locally in your browser.
+                </p>
+
+            </div>
+
+        </section>
+
+
+        <!-- =================================================
+             CONVERSION MODE
+        ================================================== -->
+
+        <section class="mb-6">
+
+            <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+
+                <!-- MySQL → SQLite -->
+
+                <button
+                    id="modeMysqlToSqlite"
+                    onclick="setConversionMode('mysql-to-sqlite')"
+                    class="mode-card group rounded-2xl border border-blue-500/50
+                           bg-blue-500/10 p-5 text-left shadow-lg
+                           shadow-blue-950/20 transition hover:bg-blue-500/15"
+                >
+
+                    <div class="flex items-start justify-between">
+
+                        <div class="flex items-center gap-4">
+
+                            <div class="flex h-12 w-12 items-center justify-center
+                                        rounded-xl bg-orange-500/15 text-orange-400">
+
+                                <svg
+                                    class="h-6 w-6"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <ellipse
+                                        cx="12"
+                                        cy="5"
+                                        rx="8"
+                                        ry="3"
+                                    />
+
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M4 5v7c0 1.66 3.58 3 8 3s8-1.34 8-3V5"
+                                    />
+
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M4 12v7c0 1.66 3.58 3 8 3s8-1.34 8-3v-7"
+                                    />
+                                </svg>
+
+                            </div>
+
+                            <div>
+                                <h3 class="font-semibold text-white">
+                                    MySQL → SQLite
+                                </h3>
+
+                                <p class="mt-1 text-xs text-slate-400">
+                                    Convert .sql dumps into .sqlite
+                                </p>
+                            </div>
+
+                        </div>
+
+                        <span
+                            id="mysqlSelected"
+                            class="rounded-full bg-blue-500 px-2.5 py-1 text-[10px]
+                                   font-bold uppercase tracking-wide text-white"
+                        >
+                            Active
+                        </span>
+
+                    </div>
+
+                </button>
+
+
+                <!-- SQLite → MySQL -->
+
+                <button
+                    id="modeSqliteToMysql"
+                    onclick="setConversionMode('sqlite-to-mysql')"
+                    class="mode-card group rounded-2xl border border-slate-800
+                           bg-slate-900/70 p-5 text-left transition
+                           hover:border-slate-700 hover:bg-slate-900"
+                >
+
+                    <div class="flex items-start justify-between">
+
+                        <div class="flex items-center gap-4">
+
+                            <div class="flex h-12 w-12 items-center justify-center
+                                        rounded-xl bg-cyan-500/15 text-cyan-400">
+
+                                <svg
+                                    class="h-6 w-6"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M6 4h12v16H6z"
+                                    />
+
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M9 8h6M9 12h6M9 16h4"
+                                    />
+                                </svg>
+
+                            </div>
+
+                            <div>
+                                <h3 class="font-semibold text-white">
+                                    SQLite → MySQL
+                                </h3>
+
+                                <p class="mt-1 text-xs text-slate-400">
+                                    Export SQLite data as MySQL SQL
+                                </p>
+                            </div>
+
+                        </div>
+
+                        <span
+                            id="sqliteSelected"
+                            class="hidden rounded-full bg-blue-500 px-2.5 py-1
+                                   text-[10px] font-bold uppercase tracking-wide text-white"
+                        >
+                            Active
+                        </span>
+
+                    </div>
+
+                </button>
+
+            </div>
+
+        </section>
+
+
+        <!-- =================================================
+             WORKSPACE
+        ================================================== -->
+
+        <section class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+
+            <!-- =================================================
+                 LEFT PANEL
+            ================================================== -->
+
+            <div class="space-y-6 lg:col-span-2">
+
+                <!-- Upload -->
+
+                <div class="rounded-2xl border border-slate-800 bg-slate-900/70 p-5 shadow-xl">
+
+                    <div class="mb-5 flex items-center justify-between">
+
+                        <div>
+                            <h3 class="font-semibold text-white">
+                                Source Database
+                            </h3>
+
+                            <p
+                                id="sourceDescription"
+                                class="mt-1 text-xs text-slate-500"
+                            >
+                                Upload a MySQL .sql dump file
+                            </p>
+                        </div>
+
+                        <button
+                            onclick="clearWorkspace()"
+                            class="rounded-lg px-3 py-2 text-xs font-medium
+                                   text-slate-400 transition hover:bg-slate-800
+                                   hover:text-white"
+                        >
+                            Clear
+                        </button>
+
+                    </div>
+
+
+                    <!-- Drop Zone -->
+
+                    <div
+                        id="dropZone"
+                        class="drop-zone cursor-pointer rounded-2xl border-2
+                               border-dashed border-slate-700 bg-slate-950/50
+                               p-8 text-center"
+                    >
+
+                        <input
+                            type="file"
+                            id="sqlFile"
+                            class="hidden"
+                            accept=".sql,.sqlite,.db,.sqlite3"
+                        >
+
+                        <div
+                            class="mx-auto mb-4 flex h-16 w-16 items-center
+                                   justify-center rounded-2xl bg-slate-800
+                                   text-slate-400"
+                        >
+
+                            <svg
+                                id="uploadIcon"
+                                class="h-8 w-8"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="1.5"
+                                    d="M12 16V4m0 0L7 9m5-5l5 5M5 20h14"
+                                />
+                            </svg>
+
+                        </div>
+
+                        <h4 class="font-semibold text-white">
+                            Drop your file here
+                        </h4>
+
+                        <p class="mt-2 text-xs text-slate-500">
+                            or click to browse your computer
+                        </p>
+
+                        <div
+                            id="fileTypeText"
+                            class="mt-5 inline-flex rounded-lg border border-slate-800
+                                   bg-slate-900 px-3 py-1.5 text-[11px] text-slate-400"
+                        >
+                            Supported: .sql
+                        </div>
+
+                    </div>
+
+
+                    <!-- Selected File -->
+
+                    <div
+                        id="selectedFile"
+                        class="mt-4 hidden rounded-xl border border-slate-800
+                               bg-slate-950 p-4"
+                    >
+
+                        <div class="flex items-center justify-between">
+
+                            <div class="flex min-w-0 items-center gap-3">
+
+                                <div class="flex h-10 w-10 shrink-0 items-center
+                                            justify-center rounded-lg bg-blue-500/10
+                                            text-blue-400">
+
+                                    <svg
+                                        class="h-5 w-5"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            stroke-width="1.8"
+                                            d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+                                        />
+
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            stroke-width="1.8"
+                                            d="M14 2v6h6"
+                                        />
+                                    </svg>
+
+                                </div>
+
+                                <div class="min-w-0">
+
+                                    <p
+                                        id="fileName"
+                                        class="truncate text-sm font-medium text-white"
+                                    ></p>
+
+                                    <p
+                                        id="fileSize"
+                                        class="mt-1 text-xs text-slate-500"
+                                    ></p>
+
+                                </div>
+
+                            </div>
+
+                            <button
+                                onclick="removeFile()"
+                                class="ml-3 rounded-lg p-2 text-slate-500
+                                       hover:bg-slate-800 hover:text-red-400"
+                            >
+                                ✕
+                            </button>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <!-- SQL Editor -->
+
+                <div class="rounded-2xl border border-slate-800 bg-slate-900/70 shadow-xl">
+
+                    <div class="flex items-center justify-between border-b
+                                border-slate-800 px-5 py-4">
+
+                        <div>
+
+                            <h3 class="font-semibold text-white">
+                                SQL Preview
+                            </h3>
+
+                            <p class="mt-1 text-xs text-slate-500">
+                                Review or edit SQL before conversion
+                            </p>
+
+                        </div>
+
+                        <button
+                            onclick="copySQL()"
+                            class="rounded-lg border border-slate-700
+                                   bg-slate-800 px-3 py-2 text-xs
+                                   font-medium text-slate-300
+                                   transition hover:bg-slate-700 hover:text-white"
+                        >
+                            Copy SQL
+                        </button>
+
+                    </div>
+
+                    <textarea
+                        id="sqlPreview"
+                        spellcheck="false"
+                        class="custom-scrollbar block h-80 w-full resize-y
+                               border-0 bg-slate-950 p-5 font-mono text-xs
+                               leading-6 text-slate-300 outline-none"
+                        placeholder="Your SQL content will appear here..."
+                    ></textarea>
+
+                </div>
+
+
+                <!-- Conversion Log -->
+
+                <div class="rounded-2xl border border-slate-800 bg-slate-900/70 shadow-xl">
+
+                    <div class="border-b border-slate-800 px-5 py-4">
+
+                        <div class="flex items-center justify-between">
+
+                            <div>
+
+                                <h3 class="font-semibold text-white">
+                                    Conversion Log
+                                </h3>
+
+                                <p class="mt-1 text-xs text-slate-500">
+                                    Conversion activity and errors
+                                </p>
+
+                            </div>
+
+                            <span
+                                id="logStatus"
+                                class="rounded-full bg-slate-800 px-2.5 py-1
+                                       text-[10px] font-medium text-slate-400"
+                            >
+                                Ready
+                            </span>
+
+                        </div>
+
+                    </div>
+
+                    <textarea
+                        id="log"
+                        readonly
+                        class="custom-scrollbar h-52 w-full resize-none
+                               border-0 bg-slate-950 p-5 font-mono text-xs
+                               leading-6 text-slate-400 outline-none"
+                        placeholder="Conversion log..."
+                    ></textarea>
+
+                </div>
+
+            </div>
+
+
+            <!-- =================================================
+                 RIGHT SIDEBAR
+            ================================================== -->
+
+            <aside class="space-y-6">
+
+                <!-- Action -->
+
+                <div class="rounded-2xl border border-slate-800
+                            bg-slate-900/70 p-5 shadow-xl">
+
+                    <h3 class="font-semibold text-white">
+                        Conversion
+                    </h3>
+
+                    <p
+                        id="conversionLabel"
+                        class="mt-1 text-xs text-slate-500"
+                    >
+                        MySQL database → SQLite database
+                    </p>
+
+                    <button
+                        id="convertBtn"
+                        onclick="convertDatabase()"
+                        class="mt-5 flex w-full items-center justify-center
+                               gap-2 rounded-xl bg-gradient-to-r
+                               from-blue-600 to-violet-600 px-4 py-3
+                               text-sm font-semibold text-white
+                               shadow-lg shadow-blue-950/30
+                               transition hover:from-blue-500
+                               hover:to-violet-500 disabled:cursor-not-allowed
+                               disabled:opacity-40"
+                    >
+
+                        <span id="convertBtnText">
+                            Convert Database
+                        </span>
+
+                        <span
+                            id="convertLoader"
+                            class="loader hidden"
+                        ></span>
+
+                    </button>
+
+                    <button
+                        id="downloadBtn"
+                        onclick="downloadResult()"
+                        disabled
+                        class="mt-3 flex w-full items-center justify-center
+                               gap-2 rounded-xl border border-slate-700
+                               bg-slate-800 px-4 py-3 text-sm font-semibold
+                               text-slate-300 transition
+                               hover:bg-slate-700 hover:text-white
+                               disabled:cursor-not-allowed disabled:opacity-30"
+                    >
+                        <span>⬇</span>
+                        <span id="downloadText">
+                            Download Result
+                        </span>
+                    </button>
+
+                </div>
+
+
+                <!-- Statistics -->
+
+                <div class="rounded-2xl border border-slate-800
+                            bg-slate-900/70 p-5 shadow-xl">
+
+                    <h3 class="font-semibold text-white">
+                        Database Statistics
+                    </h3>
+
+                    <div class="mt-5 space-y-3">
+
+                        <div class="flex items-center justify-between
+                                    rounded-xl bg-slate-950 px-4 py-3">
+
+                            <span class="text-xs text-slate-500">
+                                Tables
+                            </span>
+
+                            <span
+                                id="tableCount"
+                                class="font-mono text-sm font-bold text-white"
+                            >
+                                0
+                            </span>
+
+                        </div>
+
+                        <div class="flex items-center justify-between
+                                    rounded-xl bg-slate-950 px-4 py-3">
+
+                            <span class="text-xs text-slate-500">
+                                Rows
+                            </span>
+
+                            <span
+                                id="rowCount"
+                                class="font-mono text-sm font-bold text-white"
+                            >
+                                0
+                            </span>
+
+                        </div>
+
+                        <div class="flex items-center justify-between
+                                    rounded-xl bg-slate-950 px-4 py-3">
+
+                            <span class="text-xs text-slate-500">
+                                Status
+                            </span>
+
+                            <span
+                                id="databaseStatus"
+                                class="text-xs font-semibold text-slate-500"
+                            >
+                                Waiting
+                            </span>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <!-- Supported Features -->
+
+                <div class="rounded-2xl border border-slate-800
+                            bg-slate-900/70 p-5 shadow-xl">
+
+                    <h3 class="font-semibold text-white">
+                        Conversion Features
+                    </h3>
+
+                    <div class="mt-4 space-y-3">
+
+                        <div class="flex gap-3">
+
+                            <span class="mt-0.5 text-emerald-400">
+                                ✓
+                            </span>
+
+                            <div>
+                                <p class="text-xs font-medium text-slate-300">
+                                    Data preservation
+                                </p>
+
+                                <p class="mt-0.5 text-[11px] text-slate-500">
+                                    Tables and records are retained
+                                </p>
+                            </div>
+
+                        </div>
+
+
+                        <div class="flex gap-3">
+
+                            <span class="mt-0.5 text-emerald-400">
+                                ✓
+                            </span>
+
+                            <div>
+                                <p class="text-xs font-medium text-slate-300">
+                                    Type conversion
+                                </p>
+
+                                <p class="mt-0.5 text-[11px] text-slate-500">
+                                    Common MySQL types mapped to SQLite
+                                </p>
+                            </div>
+
+                        </div>
+
+
+                        <div class="flex gap-3">
+
+                            <span class="mt-0.5 text-emerald-400">
+                                ✓
+                            </span>
+
+                            <div>
+                                <p class="text-xs font-medium text-slate-300">
+                                    Local processing
+                                </p>
+
+                                <p class="mt-0.5 text-[11px] text-slate-500">
+                                    No server upload required
+                                </p>
+                            </div>
+
+                        </div>
+
+
+                        <div class="flex gap-3">
+
+                            <span class="mt-0.5 text-emerald-400">
+                                ✓
+                            </span>
+
+                            <div>
+                                <p class="text-xs font-medium text-slate-300">
+                                    Database preview
+                                </p>
+
+                                <p class="mt-0.5 text-[11px] text-slate-500">
+                                    Inspect converted tables and rows
+                                </p>
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </aside>
+
+        </section>
+
+
+        <!-- =================================================
+             DATABASE PREVIEW
+        ================================================== -->
+
+        <section
+            id="previewSection"
+            class="mt-6 hidden fade-in"
+        >
+
+            <div class="rounded-2xl border border-slate-800
+                        bg-slate-900/70 shadow-xl">
+
+                <div class="border-b border-slate-800 px-5 py-5">
+
+                    <div class="flex flex-col gap-3 sm:flex-row
+                                sm:items-center sm:justify-between">
+
+                        <div>
+
+                            <h3 class="text-lg font-semibold text-white">
+                                Database Preview
+                            </h3>
+
+                            <p class="mt-1 text-xs text-slate-500">
+                                Browse tables and sample records
+                            </p>
+
+                        </div>
+
+                        <div
+                            id="previewSummary"
+                            class="text-xs text-slate-500"
+                        >
+                            No database loaded
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <!-- Table Navigation -->
+
+                <div
+                    id="tableTabs"
+                    class="custom-scrollbar flex gap-2 overflow-x-auto
+                           border-b border-slate-800 p-3"
+                ></div>
+
+
+                <!-- Preview -->
+
+                <div
+                    id="previewWrapper"
+                    class="custom-scrollbar max-h-[550px]
+                           overflow-auto p-5"
+                ></div>
+
+            </div>
+
+        </section>
+
+    </main>
+
+<!-- =====================================================
+     FOOTER
+====================================================== -->
+
+<footer class="border-t border-slate-800/80 bg-slate-950/70">
+<div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+
+    <div class="flex flex-col items-center justify-between gap-4
+                text-center sm:flex-row sm:text-left">
+
+        <!-- Copyright -->
+
+        <div class="flex flex-col gap-1">
+
+            <p class="text-sm font-medium text-slate-300">
+                © <span id="copyrightYear"></span>
+                Client-side SQL Converter Studio
+            </p>
+
+            <p class="text-xs text-slate-600">
+                All rights reserved.
+            </p>
+
+        </div>
+
+
+        <!-- GitHub -->
+
+        <a
+            href="https://github.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="group inline-flex items-center gap-2 rounded-lg
+                   border border-slate-800 bg-slate-900 px-4 py-2
+                   text-xs font-medium text-slate-400
+                   transition hover:border-slate-700
+                   hover:bg-slate-800 hover:text-white"
+        >
+
+            <!-- GitHub Icon -->
+
+            <svg
+                class="h-4 w-4 transition group-hover:scale-110"
+                fill="currentColor"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+            >
+                <path
+                    fill-rule="evenodd"
+                    d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483
+                    0-.237-.009-.868-.014-1.703-2.782.605-3.369-1.342-3.369-1.342-.454-1.155-1.11-1.462-1.11-1.462
+                    -.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088
+                    2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951
+                    0-1.093.39-1.987 1.029-2.688-.103-.253-.446-1.272.098-2.65
+                    0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844c.85.004 1.705.115
+                    2.504.337 1.909-1.296 2.748-1.026 2.748-1.026.546 1.378.202 2.397.1 2.65
+                    .64.701 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943
+                    .359.31.678.921.678 1.856 0 1.338-.012 2.419-.012 2.747
+                    0 .268.18.58.688.482A10.019 10.019 0 0 0 22 12.017C22 6.484 17.523 2 12 2Z"
+                    clip-rule="evenodd"
+                />
+            </svg>
+
+            <span>
+                GitHub
+            </span>
+
+            <svg
+                class="h-3.5 w-3.5 text-slate-600 transition
+                       group-hover:translate-x-0.5 group-hover:text-slate-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+            >
+                <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M10 6h8m0 0v8m0-8L9 15"
+                />
+            </svg>
+
+        </a>
+
+    </div>
+
+
+    <!-- Bottom System Information -->
+
+    <div class="mt-5 flex flex-col items-center justify-center gap-2
+                border-t border-slate-800/60 pt-5 text-[11px]
+                text-slate-600 sm:flex-row sm:gap-4">
+
+        <span>
+            SQL Converter Studio
+        </span>
+
+        <span class="hidden sm:inline">
+            •
+        </span>
+
+        <span>
+            Client-side processing
+        </span>
+
+        <span class="hidden sm:inline">
+            •
+        </span>
+
+        <span>
+            No database upload required
+        </span>
+
+    </div>
+
+</div>
+
+</footer>
+
+<script>
+    document.getElementById('copyrightYear').textContent =
+        new Date().getFullYear();
+</script>
+
+
+</div>
+
+
+<!-- =========================================================
+     JAVASCRIPT
+========================================================== -->
+
+<script>
+
+    /* =====================================================
+       GLOBAL STATE
+    ====================================================== */
+
+    let SQL = null;
+    let db = null;
+
+    let conversionMode = 'mysql-to-sqlite';
+
+    let selectedFile = null;
+
+    let convertedSqliteDatabase = null;
+
+    let generatedMysqlSQL = '';
+
+    let currentTables = [];
+
+
+    /* =====================================================
+       SQL.JS INITIALIZATION
+    ====================================================== */
+
+    initSqlJs({
+        locateFile: file =>
+            `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${file}`
+    })
+    .then(SQLLib => {
+
+        SQL = SQLLib;
+
+        writeLog('✅ SQL.js loaded successfully.');
+        writeLog('Ready for database conversion.');
+
+        setLogStatus('Ready');
+
+    })
+    .catch(error => {
+
+        writeLog(
+            '❌ Failed to load SQL.js: ' +
+            error.message
+        );
+
+        setLogStatus('Error');
+
+    });
+
+
+    /* =====================================================
+       DOM ELEMENTS
+    ====================================================== */
+
+    const fileInput =
+        document.getElementById('sqlFile');
+
+    const dropZone =
+        document.getElementById('dropZone');
+
+
+    /* =====================================================
+       FILE INPUT
+    ====================================================== */
+
+    dropZone.addEventListener('click', () => {
+        fileInput.click();
+    });
+
+
+    fileInput.addEventListener('change', event => {
+
+        const file = event.target.files[0];
+
+        if (file) {
+            handleSelectedFile(file);
+        }
+
+    });
+
+
+    /* =====================================================
+       DRAG AND DROP
+    ====================================================== */
+
+    dropZone.addEventListener('dragover', event => {
+
+        event.preventDefault();
+
+        dropZone.classList.add('dragover');
+
+    });
+
+
+    dropZone.addEventListener('dragleave', () => {
+
+        dropZone.classList.remove('dragover');
+
+    });
+
+
+    dropZone.addEventListener('drop', event => {
+
+        event.preventDefault();
+
+        dropZone.classList.remove('dragover');
+
+        const file = event.dataTransfer.files[0];
+
+        if (file) {
+            handleSelectedFile(file);
+        }
+
+    });
+
+
+    /* =====================================================
+       MODE
+    ====================================================== */
+
+    function setConversionMode(mode) {
+
+        conversionMode = mode;
+
+        const mysqlCard =
+            document.getElementById('modeMysqlToSqlite');
+
+        const sqliteCard =
+            document.getElementById('modeSqliteToMysql');
+
+        const mysqlSelected =
+            document.getElementById('mysqlSelected');
+
+        const sqliteSelected =
+            document.getElementById('sqliteSelected');
+
+        const description =
+            document.getElementById('sourceDescription');
+
+        const fileTypeText =
+            document.getElementById('fileTypeText');
+
+        const conversionLabel =
+            document.getElementById('conversionLabel');
+
+        if (mode === 'mysql-to-sqlite') {
+
+            mysqlCard.className =
+                'mode-card group rounded-2xl border border-blue-500/50 bg-blue-500/10 p-5 text-left shadow-lg shadow-blue-950/20 transition hover:bg-blue-500/15';
+
+            sqliteCard.className =
+                'mode-card group rounded-2xl border border-slate-800 bg-slate-900/70 p-5 text-left transition hover:border-slate-700 hover:bg-slate-900';
+
+            mysqlSelected.classList.remove('hidden');
+            sqliteSelected.classList.add('hidden');
+
+            description.textContent =
+                'Upload a MySQL .sql dump file';
+
+            fileTypeText.textContent =
+                'Supported: .sql';
+
+            conversionLabel.textContent =
+                'MySQL database → SQLite database';
+
+            fileInput.accept =
+                '.sql';
+
+        } else {
+
+            mysqlCard.className =
+                'mode-card group rounded-2xl border border-slate-800 bg-slate-900/70 p-5 text-left transition hover:border-slate-700 hover:bg-slate-900';
+
+            sqliteCard.className =
+                'mode-card group rounded-2xl border border-blue-500/50 bg-blue-500/10 p-5 text-left shadow-lg shadow-blue-950/20 transition hover:bg-blue-500/15';
+
+            mysqlSelected.classList.add('hidden');
+            sqliteSelected.classList.remove('hidden');
+
+            description.textContent =
+                'Upload an SQLite database file';
+
+            fileTypeText.textContent =
+                'Supported: .sqlite, .db, .sqlite3';
+
+            conversionLabel.textContent =
+                'SQLite database → MySQL SQL';
+
+            fileInput.accept =
+                '.sqlite,.db,.sqlite3';
+
+        }
+
+        removeFile();
+
+    }
+
+
+    /* =====================================================
+       HANDLE FILE
+    ====================================================== */
+
+    function handleSelectedFile(file) {
+
+        selectedFile = file;
+
+        document
+            .getElementById('selectedFile')
+            .classList.remove('hidden');
+
+        document
+            .getElementById('fileName')
+            .textContent = file.name;
+
+        document
+            .getElementById('fileSize')
+            .textContent =
+            formatBytes(file.size);
+
+        document
+            .getElementById('downloadBtn')
+            .disabled = true;
+
+        resetDatabaseStatistics();
+
+        if (conversionMode === 'mysql-to-sqlite') {
+
+            readMySQLFile(file);
+
+        } else {
+
+            readSQLiteFile(file);
+
+        }
+
+    }
+
+
+    /* =====================================================
+       READ MYSQL
+    ====================================================== */
+
+    function readMySQLFile(file) {
+
+        const reader =
+            new FileReader();
+
+        reader.onload = event => {
+
+            const sql =
+                event.target.result;
+
+            document
+                .getElementById('sqlPreview')
+                .value = sql;
+
+            writeLog(
+                `📄 Loaded MySQL file: ${file.name}`
+            );
+
+            writeLog(
+                `📦 File size: ${formatBytes(file.size)}`
+            );
+
+            writeLog(
+                'Ready to convert MySQL → SQLite.'
+            );
+
+            setLogStatus('Loaded');
+
+        };
+
+        reader.onerror = () => {
+
+            writeLog(
+                '❌ Unable to read SQL file.'
+            );
+
+            setLogStatus('Error');
+
+        };
+
+        reader.readAsText(file);
+
+    }
+
+
+    /* =====================================================
+       READ SQLITE
+    ====================================================== */
+
+    function readSQLiteFile(file) {
+
+        if (!SQL) {
+
+            alert(
+                'SQL.js is still loading. Please wait a moment.'
+            );
+
+            return;
+
+        }
+
+        const reader =
+            new FileReader();
+
+        reader.onload = event => {
+
+            try {
+
+                const bytes =
+                    new Uint8Array(event.target.result);
+
+                db =
+                    new SQL.Database(bytes);
+
+                writeLog(
+                    `📄 Loaded SQLite file: ${file.name}`
+                );
+
+                writeLog(
+                    `📦 File size: ${formatBytes(file.size)}`
+                );
+
+                inspectSQLiteDatabase();
+
+                document
+                    .getElementById('sqlPreview')
+                    .value =
+                    generateMySQLSQL(db);
+
+                writeLog(
+                    '✅ SQLite database inspected successfully.'
+                );
+
+                writeLog(
+                    'Ready to export SQLite → MySQL.'
+                );
+
+                setLogStatus('Loaded');
+
+            } catch (error) {
+
+                writeLog(
+                    '❌ SQLite database error: ' +
+                    error.message
+                );
+
+                setLogStatus('Error');
+
+            }
+
+        };
+
+        reader.readAsArrayBuffer(file);
+
+    }
+
+
+    /* =====================================================
+       MAIN CONVERSION
+    ====================================================== */
+
+    async function convertDatabase() {
+
+        if (!selectedFile) {
+
+            alert(
+                'Please select a database file first.'
+            );
+
+            return;
+
+        }
+
+        if (!SQL) {
+
+            alert(
+                'SQL.js is still loading. Please wait.'
+            );
+
+            return;
+
+        }
+
+        setConverting(true);
+
+        clearPreview();
+
+        try {
+
+            if (
+                conversionMode ===
+                'mysql-to-sqlite'
+            ) {
+
+                await convertMySQLToSQLite();
+
+            } else {
+
+                await convertSQLiteToMySQL();
+
+            }
+
+        } catch (error) {
+
+            writeLog(
+                '❌ Conversion failed: ' +
+                error.message
+            );
+
+            setLogStatus('Error');
+
+        } finally {
+
+            setConverting(false);
+
+        }
+
+    }
+
+
+    /* =====================================================
+       MYSQL → SQLITE
+    ====================================================== */
+
+    async function convertMySQLToSQLite() {
+
+        const input =
+            document
+                .getElementById('sqlPreview')
+                .value;
+
+        if (!input.trim()) {
+
+            throw new Error(
+                'SQL input is empty.'
+            );
+
+        }
+
+        writeLog(
+            '🔄 Converting MySQL syntax to SQLite...'
+        );
+
+        const sqliteSQL =
+            convertMySQLSyntaxToSQLite(input);
+
+        db =
+            new SQL.Database();
+
+        db.run(
+            'PRAGMA foreign_keys = OFF;'
+        );
+
+        const statements =
+            splitSQLStatements(sqliteSQL);
+
+        writeLog(
+            `🧩 Detected ${statements.length} SQL statements.`
+        );
+
+        let success = 0;
+        let errors = 0;
+
+        for (
+            let i = 0;
+            i < statements.length;
+            i++
+        ) {
+
+            const statement =
+                statements[i].trim();
+
+            if (!statement) {
+                continue;
+            }
+
+            try {
+
+                db.run(statement);
+
+                success++;
+
+            } catch (error) {
+
+                errors++;
+
+                writeLog(
+                    `⚠ Statement ${i + 1} skipped: ${error.message}`
+                );
+
+            }
+
+        }
+
+        db.run(
+            'PRAGMA foreign_keys = ON;'
+        );
+
+        convertedSqliteDatabase =
+            db.export();
+
+        writeLog(
+            `✅ Statements executed: ${success}`
+        );
+
+        if (errors > 0) {
+
+            writeLog(
+                `⚠ Statements with errors: ${errors}`
+            );
+
+        }
+
+        inspectSQLiteDatabase();
+
+        showPreview();
+
+        document
+            .getElementById('downloadBtn')
+            .disabled = false;
+
+        document
+            .getElementById('downloadText')
+            .textContent =
+            'Download .sqlite';
+
+        setLogStatus(
+            errors > 0
+                ? 'Completed with warnings'
+                : 'Completed'
+        );
+
+    }
+
+
+    /* =====================================================
+       SQLITE → MYSQL
+    ====================================================== */
+
+    async function convertSQLiteToMySQL() {
+
+        if (!db) {
+
+            throw new Error(
+                'No SQLite database has been loaded.'
+            );
+
+        }
+
+        writeLog(
+            '🔄 Converting SQLite database to MySQL SQL...'
+        );
+
+        generatedMysqlSQL =
+            generateMySQLSQL(db);
+
+        document
+            .getElementById('sqlPreview')
+            .value =
+            generatedMysqlSQL;
+
+        const tables =
+            getSQLiteTables(db);
+
+        currentTables =
+            tables;
+
+        writeLog(
+            `📋 Tables exported: ${tables.length}`
+        );
+
+        let totalRows = 0;
+
+        tables.forEach(table => {
+
+            const result =
+                db.exec(
+                    `SELECT COUNT(*) AS count FROM ${quoteIdentifier(table)}`
+                );
+
+            if (
+                result.length &&
+                result[0].values.length
+            ) {
+
+                totalRows +=
+                    Number(
+                        result[0].values[0][0]
+                    );
+
+            }
+
+        });
+
+        document
+            .getElementById('tableCount')
+            .textContent =
+            tables.length.toLocaleString();
+
+        document
+            .getElementById('rowCount')
+            .textContent =
+            totalRows.toLocaleString();
+
+        document
+            .getElementById('databaseStatus')
+            .textContent =
+            'Converted';
+
+        document
+            .getElementById('databaseStatus')
+            .className =
+            'text-xs font-semibold text-emerald-400';
+
+        showPreview();
+
+        document
+            .getElementById('downloadBtn')
+            .disabled = false;
+
+        document
+            .getElementById('downloadText')
+            .textContent =
+            'Download .sql';
+
+        writeLog(
+            '✅ SQLite → MySQL conversion complete.'
+        );
+
+        setLogStatus('Completed');
+
+    }
+
+
+    /* =====================================================
+       MYSQL SYNTAX CONVERSION
+    ====================================================== */
+
+    function convertMySQLSyntaxToSQLite(input) {
+
+        let sql = input;
+
+        /* -------------------------------------------------
+           Remove comments
+        ------------------------------------------------- */
+
+        sql =
+            sql.replace(
+                /\/\*![\s\S]*?\*\//g,
+                ''
+            );
+
+        sql =
+            sql.replace(
+                /\/\*[\s\S]*?\*\//g,
+                ''
+            );
+
+        sql =
+            sql.replace(
+                /^\s*--.*$/gm,
+                ''
+            );
+
+
+        /* -------------------------------------------------
+           Remove MySQL commands
+        ------------------------------------------------- */
+
+        sql =
+            sql.replace(
+                /^\s*LOCK TABLES[\s\S]*?;\s*$/gim,
+                ''
+            );
+
+        sql =
+            sql.replace(
+                /^\s*UNLOCK TABLES\s*;\s*$/gim,
+                ''
+            );
+
+        sql =
+            sql.replace(
+                /^\s*SET\s+.*?;\s*$/gim,
+                ''
+            );
+
+        sql =
+            sql.replace(
+                /^\s*START TRANSACTION\s*;\s*$/gim,
+                ''
+            );
+
+        sql =
+            sql.replace(
+                /^\s*COMMIT\s*;\s*$/gim,
+                ''
+            );
+
+        sql =
+            sql.replace(
+                /^\s*DELIMITER\s+.*$/gim,
+                ''
+            );
+
+
+        /* -------------------------------------------------
+           Remove MySQL table options
+        ------------------------------------------------- */
+
+        sql =
+            sql.replace(
+                /\s+ENGINE\s*=\s*[A-Z0-9_]+/gi,
+                ''
+            );
+
+        sql =
+            sql.replace(
+                /\s+DEFAULT\s+CHARSET\s*=\s*[A-Z0-9_]+/gi,
+                ''
+            );
+
+        sql =
+            sql.replace(
+                /\s+CHARSET\s*=\s*[A-Z0-9_]+/gi,
+                ''
+            );
+
+        sql =
+            sql.replace(
+                /\s+COLLATE\s*=\s*[A-Z0-9_]+/gi,
+                ''
+            );
+
+        sql =
+            sql.replace(
+                /\s+CHARACTER\s+SET\s+[A-Z0-9_]+/gi,
+                ''
+            );
+
+
+        /* -------------------------------------------------
+           Identifiers
+        ------------------------------------------------- */
+
+        sql =
+            sql.replace(
+                /`/g,
+                '"'
+            );
+
+
+        /* -------------------------------------------------
+           Auto increment
+        ------------------------------------------------- */
+
+        sql =
+            sql.replace(
+                /\bAUTO_INCREMENT\b/gi,
+                'AUTOINCREMENT'
+            );
+
+
+        /* -------------------------------------------------
+           Remove UNSIGNED
+        ------------------------------------------------- */
+
+        sql =
+            sql.replace(
+                /\bUNSIGNED\b/gi,
+                ''
+            );
+
+
+        /* -------------------------------------------------
+           Remove ON UPDATE
+        ------------------------------------------------- */
+
+        sql =
+            sql.replace(
+                /\s+ON\s+UPDATE\s+CURRENT_TIMESTAMP(?:\(\))?/gi,
+                ''
+            );
+
+
+        /* -------------------------------------------------
+           Numeric types
+        ------------------------------------------------- */
+
+        sql =
+            sql.replace(
+                /\bTINYINT\s*(?:\(\s*\d+\s*\))?/gi,
+                'INTEGER'
+            );
+
+        sql =
+            sql.replace(
+                /\bSMALLINT\s*(?:\(\s*\d+\s*\))?/gi,
+                'INTEGER'
+            );
+
+        sql =
+            sql.replace(
+                /\bMEDIUMINT\s*(?:\(\s*\d+\s*\))?/gi,
+                'INTEGER'
+            );
+
+        sql =
+            sql.replace(
+                /\bBIGINT\s*(?:\(\s*\d+\s*\))?/gi,
+                'INTEGER'
+            );
+
+        sql =
+            sql.replace(
+                /\bINT(?:EGER)?\s*(?:\(\s*\d+\s*\))?/gi,
+                'INTEGER'
+            );
+
+
+        /* -------------------------------------------------
+           Decimal / floating types
+        ------------------------------------------------- */
+
+        sql =
+            sql.replace(
+                /\bDECIMAL\s*\(\s*\d+\s*,\s*\d+\s*\)/gi,
+                'REAL'
+            );
+
+        sql =
+            sql.replace(
+                /\bNUMERIC\s*\(\s*\d+\s*,\s*\d+\s*\)/gi,
+                'REAL'
+            );
+
+        sql =
+            sql.replace(
+                /\bFLOAT\b/gi,
+                'REAL'
+            );
+
+        sql =
+            sql.replace(
+                /\bDOUBLE(?:\s+PRECISION)?\b/gi,
+                'REAL'
+            );
+
+
+        /* -------------------------------------------------
+           Boolean
+        ------------------------------------------------- */
+
+        sql =
+            sql.replace(
+                /\bBOOLEAN\b/gi,
+                'INTEGER'
+            );
+
+        sql =
+            sql.replace(
+                /\bBOOL\b/gi,
+                'INTEGER'
+            );
+
+
+        /* -------------------------------------------------
+           Date/time
+        ------------------------------------------------- */
+
+        sql =
+            sql.replace(
+                /\bDATETIME\b/gi,
+                'TEXT'
+            );
+
+        sql =
+            sql.replace(
+                /\bTIMESTAMP\b/gi,
+                'TEXT'
+            );
+
+        sql =
+            sql.replace(
+                /\bDATE\b/gi,
+                'TEXT'
+            );
+
+
+        /* -------------------------------------------------
+           CURRENT_TIMESTAMP
+        ------------------------------------------------- */
+
+        sql =
+            sql.replace(
+                /\bCURRENT_TIMESTAMP\(\)/gi,
+                'CURRENT_TIMESTAMP'
+            );
+
+        sql =
+            sql.replace(
+                /\bNOW\s*\(\s*\)/gi,
+                'CURRENT_TIMESTAMP'
+            );
+
+
+        /* -------------------------------------------------
+           ENUM
+        ------------------------------------------------- */
+
+        sql =
+            sql.replace(
+                /\bENUM\s*\((?:[^)(]|\([^)(]*\))*\)/gi,
+                'TEXT'
+            );
+
+
+        /* -------------------------------------------------
+           SET type
+        ------------------------------------------------- */
+
+        sql =
+            sql.replace(
+                /\bSET\s*\((?:[^)(]|\([^)(]*\))*\)/gi,
+                'TEXT'
+            );
+
+
+        /* -------------------------------------------------
+           ZEROFILL
+        ------------------------------------------------- */
+
+        sql =
+            sql.replace(
+                /\bZEROFILL\b/gi,
+                ''
+            );
+
+
+        /* -------------------------------------------------
+           MySQL index syntax
+        ------------------------------------------------- */
+
+        sql =
+            sql.replace(
+                /^\s*KEY\s+["']?[^(\s]+["']?\s*\(([^)]+)\),?$/gim,
+                ''
+            );
+
+
+        /* -------------------------------------------------
+           USING BTREE / HASH
+        ------------------------------------------------- */
+
+        sql =
+            sql.replace(
+                /\s+USING\s+(?:BTREE|HASH)\b/gi,
+                ''
+            );
+
+
+        /* -------------------------------------------------
+           COMMENT
+        ------------------------------------------------- */
+
+        sql =
+            sql.replace(
+                /\s+COMMENT\s+'(?:''|[^'])*'/gi,
+                ''
+            );
+
+
+        /* -------------------------------------------------
+           Trailing commas
+        ------------------------------------------------- */
+
+        sql =
+            sql.replace(
+                /,\s*\)/g,
+                ')'
+            );
+
+
+        /* -------------------------------------------------
+           Cleanup
+        ------------------------------------------------- */
+
+        sql =
+            sql.replace(
+                /[ \t]+/g,
+                ' '
+            );
+
+        sql =
+            sql.replace(
+                /\n\s*\n+/g,
+                '\n\n'
+            );
+
+
+        return sql.trim();
+
+    }
+
+
+    /* =====================================================
+       SAFE SQL STATEMENT SPLITTER
+    ====================================================== */
+
+    function splitSQLStatements(sql) {
+
+        const statements = [];
+
+        let current = '';
+
+        let quote = null;
+
+        let escaped = false;
+
+        for (
+            let i = 0;
+            i < sql.length;
+            i++
+        ) {
+
+            const char = sql[i];
+
+            if (escaped) {
+
+                current += char;
+
+                escaped = false;
+
+                continue;
+
+            }
+
+            if (
+                char === '\\' &&
+                quote
+            ) {
+
+                current += char;
+
+                escaped = true;
+
+                continue;
+
+            }
+
+            if (
+                (
+                    char === "'" ||
+                    char === '"' 
+                )
+            ) {
+
+                if (quote === char) {
+
+                    quote = null;
+
+                } else if (!quote) {
+
+                    quote = char;
+
+                }
+
+                current += char;
+
+                continue;
+
+            }
+
+            if (
+                char === ';' &&
+                !quote
+            ) {
+
+                if (current.trim()) {
+
+                    statements.push(
+                        current.trim()
+                    );
+
+                }
+
+                current = '';
+
+            } else {
+
+                current += char;
+
+            }
+
+        }
+
+        if (current.trim()) {
+
+            statements.push(
+                current.trim()
+            );
+
+        }
+
+        return statements;
+
+    }
+
+
+    /* =====================================================
+       GENERATE MYSQL SQL FROM SQLITE
+    ====================================================== */
+
+    function generateMySQLSQL(database) {
+
+        let output = '';
+
+        output +=
+            '-- =====================================================\n';
+
+        output +=
+            '-- SQLite → MySQL Export\n';
+
+        output +=
+            '-- Generated by SQL Converter Studio\n';
+
+        output +=
+            '-- =====================================================\n\n';
+
+        output +=
+            'SET FOREIGN_KEY_CHECKS=0;\n\n';
+
+        const tables =
+            getSQLiteTables(database);
+
+        tables.forEach(table => {
+
+            const tableInfo =
+                database.exec(
+                    `PRAGMA table_info(${quoteIdentifier(table)})`
+                );
+
+            if (!tableInfo.length) {
+                return;
+            }
+
+            const columns =
+                tableInfo[0].values;
+
+            output +=
+                `DROP TABLE IF EXISTS ${mysqlIdentifier(table)};\n\n`;
+
+            output +=
+                `CREATE TABLE ${mysqlIdentifier(table)} (\n`;
+
+            const definitions = [];
+
+            const primaryKeys = [];
+
+            columns.forEach(column => {
+
+                const cid =
+                    column[0];
+
+                const name =
+                    column[1];
+
+                const type =
+                    column[2] || 'TEXT';
+
+                const notNull =
+                    column[3];
+
+                const defaultValue =
+                    column[4];
+
+                const pk =
+                    column[5];
+
+                let mysqlType =
+                    sqliteTypeToMySQL(type);
+
+                let definition =
+                    `  ${mysqlIdentifier(name)} ${mysqlType}`;
+
+                if (
+                    pk &&
+                    columns.length === 1 &&
+                    /INT/i.test(type)
+                ) {
+
+                    definition +=
+                        ' AUTO_INCREMENT';
+
+                }
+
+                if (notNull) {
+
+                    definition +=
+                        ' NOT NULL';
+
+                }
+
+                if (
+                    defaultValue !== null &&
+                    defaultValue !== undefined
+                ) {
+
+                    let defaultText =
+                        String(defaultValue);
+
+                    if (
+                        /^CURRENT_TIMESTAMP$/i.test(
+                            defaultText
+                        )
+                    ) {
+
+                        definition +=
+                            ' DEFAULT CURRENT_TIMESTAMP';
+
+                    } else if (
+                        /^null$/i.test(
+                            defaultText
+                        )
+                    ) {
+
+                        definition +=
+                            ' DEFAULT NULL';
+
+                    } else if (
+                        /^[-+]?\d+(\.\d+)?$/.test(
+                            defaultText
+                        )
+                    ) {
+
+                        definition +=
+                            ` DEFAULT ${defaultText}`;
+
+                    } else if (
+                        /^(true|false)$/i.test(
+                            defaultText
+                        )
+                    ) {
+
+                        definition +=
+                            ` DEFAULT ${defaultText.toUpperCase() === 'TRUE' ? 1 : 0}`;
+
+                    } else {
+
+                        definition +=
+                            ` DEFAULT '${escapeMysqlString(defaultText.replace(/^'(.*)'$/, '$1'))}'`;
+
+                    }
+
+                }
+
+                definitions.push(
+                    definition
+                );
+
+                if (pk) {
+
+                    primaryKeys.push(
+                        mysqlIdentifier(name)
+                    );
+
+                }
+
+            });
+
+
+            if (primaryKeys.length) {
+
+                definitions.push(
+                    `  PRIMARY KEY (${primaryKeys.join(', ')})`
+                );
+
+            }
+
+
+            output +=
+                definitions.join(',\n');
+
+
+            output +=
+                '\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;\n\n';
+
+
+            /* -------------------------------------------------
+               Data
+            ------------------------------------------------- */
+
+            const data =
+                database.exec(
+                    `SELECT * FROM ${quoteIdentifier(table)}`
+                );
+
+            if (
+                data.length &&
+                data[0].values.length
+            ) {
+
+                const columnNames =
+                    data[0].columns;
+
+                data[0].values.forEach(row => {
+
+                    const values =
+                        row.map(value => {
+
+                            if (
+                                value === null ||
+                                value === undefined
+                            ) {
+
+                                return 'NULL';
+
+                            }
+
+                            if (
+                                typeof value === 'number'
+                            ) {
+
+                                return String(value);
+
+                            }
+
+                            if (
+                                typeof value === 'boolean'
+                            ) {
+
+                                return value
+                                    ? '1'
+                                    : '0';
+
+                            }
+
+                            return `'${escapeMysqlString(String(value))}'`;
+
+                        });
+
+                    output +=
+                        `INSERT INTO ${mysqlIdentifier(table)} (${columnNames.map(mysqlIdentifier).join(', ')}) VALUES (${values.join(', ')});\n`;
+
+                });
+
+                output += '\n';
+
+            }
+
+        });
+
+
+        output +=
+            'SET FOREIGN_KEY_CHECKS=1;\n';
+
+        return output;
+
+    }
+
+
+    /* =====================================================
+       SQLITE TYPE → MYSQL
+    ====================================================== */
+
+    function sqliteTypeToMySQL(type) {
+
+        const normalized =
+            String(type)
+                .toUpperCase()
+                .trim();
+
+        if (
+            normalized.includes('INT')
+        ) {
+
+            return 'INT';
+
+        }
+
+        if (
+            normalized.includes('CHAR') ||
+            normalized.includes('CLOB') ||
+            normalized.includes('TEXT')
+        ) {
+
+            return 'TEXT';
+
+        }
+
+        if (
+            normalized.includes('REAL') ||
+            normalized.includes('FLOA') ||
+            normalized.includes('DOUB')
+        ) {
+
+            return 'DOUBLE';
+
+        }
+
+        if (
+            normalized.includes('DEC') ||
+            normalized.includes('NUM')
+        ) {
+
+            return 'DECIMAL(18,4)';
+
+        }
+
+        if (
+            normalized.includes('BLOB')
+        ) {
+
+            return 'BLOB';
+
+        }
+
+        return 'TEXT';
+
+    }
+
+
+    /* =====================================================
+       INSPECT SQLITE DATABASE
+    ====================================================== */
+
+    function inspectSQLiteDatabase() {
+
+        if (!db) {
+            return;
+        }
+
+        currentTables =
+            getSQLiteTables(db);
+
+        let totalRows = 0;
+
+        currentTables.forEach(table => {
+
+            try {
+
+                const result =
+                    db.exec(
+                        `SELECT COUNT(*) FROM ${quoteIdentifier(table)}`
+                    );
+
+                if (
+                    result.length &&
+                    result[0].values.length
+                ) {
+
+                    totalRows +=
+                        Number(
+                            result[0].values[0][0]
+                        );
+
+                }
+
+            } catch (error) {
+
+                console.warn(
+                    error
+                );
+
+            }
+
+        });
+
+
+        document
+            .getElementById('tableCount')
+            .textContent =
+            currentTables.length.toLocaleString();
+
+        document
+            .getElementById('rowCount')
+            .textContent =
+            totalRows.toLocaleString();
+
+        document
+            .getElementById('databaseStatus')
+            .textContent =
+            'Loaded';
+
+        document
+            .getElementById('databaseStatus')
+            .className =
+            'text-xs font-semibold text-blue-400';
+
+    }
+
+
+    /* =====================================================
+       GET TABLES
+    ====================================================== */
+
+    function getSQLiteTables(database) {
+
+        const result =
+            database.exec(`
+                SELECT name
+                FROM sqlite_master
+                WHERE type = 'table'
+                AND name NOT LIKE 'sqlite_%'
+                ORDER BY name
+            `);
+
+        if (!result.length) {
+            return [];
+        }
+
+        return result[0]
+            .values
+            .map(row => row[0]);
+
+    }
+
+
+    /* =====================================================
+       SHOW PREVIEW
+    ====================================================== */
+
+    function showPreview() {
+
+        if (!db) {
+            return;
+        }
+
+        const tables =
+            getSQLiteTables(db);
+
+        currentTables =
+            tables;
+
+        const section =
+            document
+                .getElementById('previewSection');
+
+        section.classList.remove('hidden');
+
+        document
+            .getElementById('previewSummary')
+            .textContent =
+            `${tables.length} table${tables.length === 1 ? '' : 's'} available`;
+
+        renderTableTabs(tables);
+
+        if (tables.length) {
+
+            renderTablePreview(
+                tables[0]
+            );
+
+        }
+
+        section.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start'
+        });
+
+    }
+
+
+    /* =====================================================
+       TABLE TABS
+    ====================================================== */
+
+    function renderTableTabs(tables) {
+
+        const container =
+            document.getElementById('tableTabs');
+
+        container.innerHTML = '';
+
+        tables.forEach(
+            (table, index) => {
+
+                const button =
+                    document.createElement('button');
+
+                button.textContent =
+                    table;
+
+                button.className =
+                    `table-tab shrink-0 rounded-lg px-3 py-2 text-xs font-medium transition ${
+                        index === 0
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white'
+                    }`;
+
+                button.onclick = () => {
+
+                    document
+                        .querySelectorAll('.table-tab')
+                        .forEach(tab => {
+
+                            tab.className =
+                                'table-tab shrink-0 rounded-lg px-3 py-2 text-xs font-medium transition bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white';
+
+                        });
+
+                    button.className =
+                        'table-tab shrink-0 rounded-lg px-3 py-2 text-xs font-medium transition bg-blue-600 text-white';
+
+                    renderTablePreview(table);
+
+                };
+
+                container.appendChild(button);
+
+            }
+        );
+
+    }
+
+
+    /* =====================================================
+       TABLE PREVIEW
+    ====================================================== */
+
+    function renderTablePreview(tableName) {
+
+        const wrapper =
+            document.getElementById('previewWrapper');
+
+        try {
+
+            const result =
+                db.exec(
+                    `SELECT * FROM ${quoteIdentifier(tableName)} LIMIT 100`
+                );
+
+            if (!result.length) {
+
+                wrapper.innerHTML =
+                    `
+                    <div class="rounded-xl border border-slate-800
+                                bg-slate-950 p-8 text-center">
+                        <p class="text-sm text-slate-400">
+                            No data found in this table.
+                        </p>
+                    </div>
+                    `;
+
+                return;
+
+            }
+
+            const columns =
+                result[0].columns;
+
+            const rows =
+                result[0].values;
+
+
+            let html = '';
+
+            html += `
+                <div class="mb-4 flex items-center justify-between">
+                    <div>
+                        <h4 class="font-semibold text-white">
+                            ${escapeHTML(tableName)}
+                        </h4>
+
+                        <p class="mt-1 text-xs text-slate-500">
+                            Showing up to 100 records
+                        </p>
+                    </div>
+
+                    <span class="rounded-full bg-slate-800 px-2.5 py-1
+                                 text-[10px] text-slate-400">
+                        ${rows.length} rows
+                    </span>
+                </div>
+            `;
+
+
+            html += `
+                <div class="overflow-hidden rounded-xl border border-slate-800">
+                    <div class="custom-scrollbar overflow-auto">
+                        <table class="min-w-full text-left text-xs">
+                            <thead class="bg-slate-950">
+                                <tr>
+            `;
+
+
+            columns.forEach(column => {
+
+                html += `
+                    <th class="whitespace-nowrap border-b border-slate-800
+                               px-4 py-3 font-semibold text-slate-300">
+                        ${escapeHTML(column)}
+                    </th>
+                `;
+
+            });
+
+
+            html += `
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-800/70">
+            `;
+
+
+            rows.forEach(row => {
+
+                html += `
+                    <tr class="transition hover:bg-slate-800/40">
+                `;
+
+                row.forEach(cell => {
+
+                    html += `
+                        <td class="max-w-xs whitespace-nowrap
+                                   truncate px-4 py-3 text-slate-400">
+                            ${escapeHTML(
+                                cell === null ||
+                                cell === undefined
+                                    ? ''
+                                    : String(cell)
+                            )}
+                        </td>
+                    `;
+
+                });
+
+                html += `
+                    </tr>
+                `;
+
+            });
+
+
+            html += `
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+
+
+            wrapper.innerHTML =
+                html;
+
+        } catch (error) {
+
+            wrapper.innerHTML =
+                `
+                <div class="rounded-xl border border-red-500/20
+                            bg-red-500/5 p-6">
+                    <p class="text-sm font-semibold text-red-400">
+                        Preview error
+                    </p>
+
+                    <p class="mt-2 text-xs text-red-300/70">
+                        ${escapeHTML(error.message)}
+                    </p>
+                </div>
+                `;
+
+        }
+
+    }
+
+
+    /* =====================================================
+       DOWNLOAD
+    ====================================================== */
+
+    function downloadResult() {
+
+        if (
+            conversionMode ===
+            'mysql-to-sqlite'
+        ) {
+
+            if (!convertedSqliteDatabase) {
+
+                alert(
+                    'Please convert the database first.'
+                );
+
+                return;
+
+            }
+
+            const blob =
+                new Blob(
+                    [convertedSqliteDatabase],
+                    {
+                        type:
+                            'application/x-sqlite3'
+                    }
+                );
+
+            const url =
+                URL.createObjectURL(blob);
+
+            const a =
+                document.createElement('a');
+
+            a.href =
+                url;
+
+            a.download =
+                buildOutputFilename(
+                    selectedFile?.name,
+                    '.sqlite'
+                );
+
+            document.body.appendChild(a);
+
+            a.click();
+
+            a.remove();
+
+            URL.revokeObjectURL(url);
+
+            writeLog(
+                `⬇ SQLite database downloaded.`
+            );
+
+        } else {
+
+            if (!generatedMysqlSQL) {
+
+                alert(
+                    'Please convert the database first.'
+                );
+
+                return;
+
+            }
+
+            const blob =
+                new Blob(
+                    [generatedMysqlSQL],
+                    {
+                        type:
+                            'application/sql'
+                    }
+                );
+
+            const url =
+                URL.createObjectURL(blob);
+
+            const a =
+                document.createElement('a');
+
+            a.href =
+                url;
+
+            a.download =
+                buildOutputFilename(
+                    selectedFile?.name,
+                    '.sql'
+                );
+
+            document.body.appendChild(a);
+
+            a.click();
+
+            a.remove();
+
+            URL.revokeObjectURL(url);
+
+            writeLog(
+                `⬇ MySQL SQL file downloaded.`
+            );
+
+        }
+
+    }
+
+
+    /* =====================================================
+       OUTPUT FILENAME
+    ====================================================== */
+
+    function buildOutputFilename(
+        originalName,
+        extension
+    ) {
+
+        if (!originalName) {
+
+            return 'converted' + extension;
+
+        }
+
+        const base =
+            originalName.replace(
+                /\.(sql|sqlite|sqlite3|db)$/i,
+                ''
+            );
+
+        return (
+            base +
+            '_converted' +
+            extension
+        );
+
+    }
+
+
+    /* =====================================================
+       REMOVE FILE
+    ====================================================== */
+
+    function removeFile() {
+
+        selectedFile = null;
+
+        fileInput.value = '';
+
+        document
+            .getElementById('selectedFile')
+            .classList.add('hidden');
+
+        document
+            .getElementById('sqlPreview')
+            .value = '';
+
+        document
+            .getElementById('downloadBtn')
+            .disabled = true;
+
+        convertedSqliteDatabase =
+            null;
+
+        generatedMysqlSQL =
+            '';
+
+        db = null;
+
+        clearPreview();
+
+        resetDatabaseStatistics();
+
+        writeLog(
+            'Workspace cleared.'
+        );
+
+        setLogStatus('Ready');
+
+    }
+
+
+    /* =====================================================
+       CLEAR WORKSPACE
+    ====================================================== */
+
+    function clearWorkspace() {
+
+        removeFile();
+
+        writeLog(
+            'Ready for a new database.'
+        );
+
+    }
+
+
+    /* =====================================================
+       CLEAR PREVIEW
+    ====================================================== */
+
+    function clearPreview() {
+
+        document
+            .getElementById('previewSection')
+            .classList.add('hidden');
+
+        document
+            .getElementById('tableTabs')
+            .innerHTML = '';
+
+        document
+            .getElementById('previewWrapper')
+            .innerHTML = '';
+
+    }
+
+
+    /* =====================================================
+       RESET STATISTICS
+    ====================================================== */
+
+    function resetDatabaseStatistics() {
+
+        document
+            .getElementById('tableCount')
+            .textContent = '0';
+
+        document
+            .getElementById('rowCount')
+            .textContent = '0';
+
+        document
+            .getElementById('databaseStatus')
+            .textContent = 'Waiting';
+
+        document
+            .getElementById('databaseStatus')
+            .className =
+            'text-xs font-semibold text-slate-500';
+
+    }
+
+
+    /* =====================================================
+       COPY SQL
+    ====================================================== */
+
+    async function copySQL() {
+
+        const textarea =
+            document.getElementById('sqlPreview');
+
+        if (!textarea.value) {
+
+            return;
+
+        }
+
+        try {
+
+            await navigator.clipboard.writeText(
+                textarea.value
+            );
+
+            writeLog(
+                '📋 SQL copied to clipboard.'
+            );
+
+        } catch (error) {
+
+            textarea.select();
+
+            document.execCommand(
+                'copy'
+            );
+
+            writeLog(
+                '📋 SQL copied to clipboard.'
+            );
+
+        }
+
+    }
+
+
+    /* =====================================================
+       CONVERSION UI
+    ====================================================== */
+
+    function setConverting(
+        converting
+    ) {
+
+        const button =
+            document.getElementById('convertBtn');
+
+        const buttonText =
+            document.getElementById('convertBtnText');
+
+        const loader =
+            document.getElementById('convertLoader');
+
+        button.disabled =
+            converting;
+
+        if (converting) {
+
+            buttonText.textContent =
+                'Converting...';
+
+            loader.classList.remove(
+                'hidden'
+            );
+
+            setLogStatus(
+                'Processing'
+            );
+
+        } else {
+
+            buttonText.textContent =
+                'Convert Database';
+
+            loader.classList.add(
+                'hidden'
+            );
+
+        }
+
+    }
+
+
+    /* =====================================================
+       LOGGING
+    ====================================================== */
+
+    function writeLog(message) {
+
+        const log =
+            document.getElementById('log');
+
+        const time =
+            new Date().toLocaleTimeString();
+
+        log.value +=
+            `[${time}] ${message}\n`;
+
+        log.scrollTop =
+            log.scrollHeight;
+
+    }
+
+
+    function setLogStatus(status) {
+
+        const element =
+            document.getElementById('logStatus');
+
+        element.textContent =
+            status;
+
+        element.className =
+            'rounded-full px-2.5 py-1 text-[10px] font-medium';
+
+        if (
+            status === 'Completed'
+        ) {
+
+            element.classList.add(
+                'bg-emerald-500/10',
+                'text-emerald-400'
+            );
+
+        } else if (
+            status === 'Error'
+        ) {
+
+            element.classList.add(
+                'bg-red-500/10',
+                'text-red-400'
+            );
+
+        } else if (
+            status === 'Processing'
+        ) {
+
+            element.classList.add(
+                'bg-blue-500/10',
+                'text-blue-400'
+            );
+
+        } else {
+
+            element.classList.add(
+                'bg-slate-800',
+                'text-slate-400'
+            );
+
+        }
+
+    }
+
+
+    /* =====================================================
+       HELPERS
+    ====================================================== */
+
+    function quoteIdentifier(
+        identifier
+    ) {
+
+        return (
+            '"' +
+            String(identifier)
+                .replace(/"/g, '""') +
+            '"'
+        );
+
+    }
+
+
+    function mysqlIdentifier(
+        identifier
+    ) {
+
+        return (
+            '`' +
+            String(identifier)
+                .replace(/`/g, '``') +
+            '`'
+        );
+
+    }
+
+
+    function escapeMysqlString(
+        value
+    ) {
+
+        return String(value)
+            .replace(/\\/g, '\\\\')
+            .replace(/'/g, "''");
+
+    }
+
+
+    function escapeHTML(
+        value
+    ) {
+
+        return String(value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+
+    }
+
+
+    function formatBytes(
+        bytes
+    ) {
+
+        if (!bytes) {
+            return '0 Bytes';
+        }
+
+        const units = [
+            'Bytes',
+            'KB',
+            'MB',
+            'GB'
+        ];
+
+        const index =
+            Math.floor(
+                Math.log(bytes) /
+                Math.log(1024)
+            );
+
+        return (
+            parseFloat(
+                (
+                    bytes /
+                    Math.pow(
+                        1024,
+                        index
+                    )
+                ).toFixed(2)
+            ) +
+            ' ' +
+            units[index]
+        );
+
+    }
+
+
+    /* =====================================================
+       INITIAL STATE
+    ====================================================== */
+
+    setConversionMode(
+        'mysql-to-sqlite'
+    );
+
+</script>
+</body>
+</html>
